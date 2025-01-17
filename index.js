@@ -12,9 +12,11 @@ app.use(express.json());
 //import routes
 const kategori = require('./routes/kategori');
 const pemasok = require('./routes/pemasok');
+const sparepart = require('./routes/sparepart');
 //use routes
 app.use('/kategori', kategori);
 app.use('/pemasok', pemasok);
+app.use('/sparepart', sparepart);
 
 app.get('/', (req, res) => {
   res.send('Hello, World!');
