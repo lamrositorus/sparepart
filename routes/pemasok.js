@@ -15,6 +15,30 @@ router.get('/', (req, res) => {
   });
 });
 
+/* get pemasok by id */
+router.get('/:id', (req, res) => {
+  const id = req.params.id;
+  const query = 'SELECT * FROM pemasok WHERE id_pemasok = $1';
+
+  //cek jika id tidak ada di database
+  const checkId = 'SELECT * FROM pemasok WHERE id_pemasok = $1';
+  db.query(checkId, [id], (err, result) => {
+    if (err) {
+      responsePayload(500, 'gagal mengambil data', null, res);
+    }
+    if (result.rows.length === 0) {
+      responsePayload(404, 'id tidak di temukan', null, res);
+      return;
+    }
+  });
+
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      responsePayload(500, 'gagal mengambil data', null, res);
+    }
+    responsePayload(200, 'data pemasok berhasil diambil', result.rows, res);
+  });
+});
 /* post pemasok */
 router.post('/', (req, res) => {
   const data = req.body;
@@ -45,14 +69,25 @@ router.post('/', (req, res) => {
     responsePayload(400, 'nama pemasok harus berupa string', null, res);
     return;
   }
-  //cek input telepon harus angka
-  if (!/^\d+$/.test(data.telepon)) {
-    responsePayload(400, 'telepon harus berupa angka', null, res);
+  //validasi nomor telepon
+  const phoneRegex = /^[0-9]+$/; // Regex untuk mengecek hanya angka
+  if (!phoneRegex.test(data.telepon)) {
+    responsePayload(400, 'nomor telepon harus berupa angka', null, res);
+    return;
+  }
+  // validasi panjang nomor telepon
+  if (data.telepon.length !== 12) {
+    responsePayload(400, 'nomor telepon harus 12 digit', null, res);
     return;
   }
   //cek input email harus valid
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-    responsePayload(400, 'email tidak valid', null, res);
+    responsePayload(
+      400,
+      'email tidak valid, email harus menggunakan format abc@example.com',
+      null,
+      res
+    );
     return;
   }
   //cek input alamat harus string
