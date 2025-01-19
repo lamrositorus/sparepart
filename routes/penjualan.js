@@ -105,6 +105,17 @@ router.post('/', async (req, res) => {
       [data.jumlah, data.id_sparepart]
     );
 
+    // Insert ke history penjualan
+    await db.query(
+      `INSERT INTO history_penjualan (
+              id_history_penjualan,
+              id_penjualan, id_customer, id_sparepart, 
+              jumlah, total_harga, tanggal, 
+              created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6,$7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [id, id, data.id_customer, data.id_sparepart, data.jumlah, total_harga, data.tanggal]
+    );
+
     return responsePayload(201, 'data berhasil disimpan', penjualan.rows[0], res);
   } catch (error) {
     console.error('Error:', error);

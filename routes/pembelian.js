@@ -132,8 +132,22 @@ router.post('/', async (req, res) => {
         data.id_sparepart,
       ]);
     }
-
-    responsePayload(201, 'data berhasil disimpan', result.rows[0], res);
+    //input ke history pembelian
+    const queryHistory =
+      'INSERT INTO history_pembelian (id_history_pembelian, id_pembelian, id_sparepart, id_pemasok, tanggal, jumlah, total_harga, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *';
+    const valuess = [
+      id,
+      id,
+      data.id_sparepart,
+      data.id_pemasok,
+      data.tanggal,
+      data.jumlah,
+      total_harga,
+      created_at,
+      updated_at,
+    ];
+    const pembelian = await db.query(queryHistory, valuess);
+    responsePayload(201, 'data berhasil disimpan', pembelian.rows[0], res);
   } catch (err) {
     responsePayload(500, 'gagal menyimpan data', null, res);
   }
