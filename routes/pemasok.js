@@ -5,144 +5,156 @@ const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
 
 /* get pemasok */
-router.get('/', (req, res) => {
-  db.query('SELECT * FROM pemasok', (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal mengambil data', null, res);
-    } else {
-      responsePayload(200, 'data pemasok berhasil diambil', result.rows, res);
-    }
-  });
+router.get('/', async (req, res) => {
+  const result = await db.query('SELECT * FROM pemasok');
+  if (result.rows.length === 0) {
+    responsePayload(200, 'data tidak ditemukan', null, res);
+    return;
+  }
+  responsePayload(200, 'data berhasil diambil', result.rows, res);
 });
 
 /* get pemasok by id */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const id = req.params.id;
-  const query = 'SELECT * FROM pemasok WHERE id_pemasok = $1';
-
-  //cek jika id tidak ada di database
-  const checkId = 'SELECT * FROM pemasok WHERE id_pemasok = $1';
-  db.query(checkId, [id], (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal mengambil data', null, res);
-      return;
-    }
-    if (result.rows.length === 0) {
-      responsePayload(404, 'id tidak di temukan', null, res);
-      return;
-    }
-
-    db.query(query, [id], (err, result) => {
-      if (err) {
-        responsePayload(500, 'gagal mengambil data', null, res);
-        return;
-      }
-      responsePayload(200, 'data pemasok berhasil diambil', result.rows, res);
-    });
-  });
-});
-
-/* post pemasok */
-router.post('/', (req, res) => {
-  const data = req.body;
-  const id = uuidv4();
-  const created_at = new Date();
-  const updated_at = new Date();
-
-  //cek jika data tidak ada
-  if (!data || !data.nama_pemasok || !data.alamat || !data.telepon || !data.email) {
-    responsePayload(400, 'data tidak valid', null, res);
+  const result = await db.query('SELECT * FROM pemasok WHERE id_pemasok = $1', [id]);
+  if (result.rows.length === 0) {
+    responsePayload(404, 'data tidak ditemukan', null, res);
     return;
   }
+  responsePayload(200, 'data berhasil diambil', result.rows[0], res);
+});
+/* post pemasok */
+router.post('/', async (req, res) => {
+  try {
+    const data = req.body;
+    const id = uuidv4();
 
-  //cek jika nama_pemasok sudah ada
-  const checkQuery = 'SELECT * FROM pemasok WHERE nama_pemasok = $1';
-  db.query(checkQuery, [data.nama_pemasok], (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal menambahkan data', null, res);
-      return;
-    }
-    if (result.rows.length > 0) {
-      responsePayload(400, 'nama pemasok sudah ada', null, res);
-      return;
-    }
-
-    //cek input nama_pemasok harus string
-    if (typeof data.nama_pemasok !== 'string') {
-      responsePayload(400, 'nama pemasok harus berupa string', null, res);
-      return;
-    }
-    //validasi nomor telepon
-    const phoneRegex = /^[0-9]+$/; // Regex untuk mengecek hanya angka
-    if (!phoneRegex.test(data.telepon)) {
-      responsePayload(400, 'nomor telepon harus berupa angka', null, res);
-      return;
-    }
-    // validasi panjang nomor telepon
-    if (data.telepon.length !== 12) {
-      responsePayload(400, 'nomor telepon harus 12 digit', null, res);
-      return;
-    }
-    //cek input email harus valid
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      responsePayload(
-        400,
-        'email tidak valid, email harus menggunakan format abc@example.com',
-        null,
-        res
-      );
-      return;
-    }
-    //cek input alamat harus string
-    if (typeof data.alamat !== 'string') {
-      responsePayload(400, 'alamat harus berupa string', null, res);
-      return;
+    // Validate required fields
+    if (!data || !data.nama_pemasok || !data.alamat || !data.telepon || !data.email) {
+      return responsePayload(400, 'data tidak valid', null, res);
     }
 
-    const query = `INSERT INTO pemasok (id_pemasok, nama_pemasok, alamat, telepon, email, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
-    const values = [
-      id,
+    // Check existing pemasok
+    const existingPemasok = await db.query('SELECT * FROM pemasok WHERE nama_pemasok = $1', [
       data.nama_pemasok,
-      data.alamat,
-      data.telepon,
-      data.email,
-      created_at,
-      updated_at,
-    ];
-    db.query(query, values, (err, result) => {
-      if (err) {
-        responsePayload(500, 'gagal menambahkan data', null, res);
-        return;
-      }
-      const payload = result.rows[0];
-      responsePayload(200, 'data pemasok berhasil ditambahkan', payload, res);
-    });
-  });
+    ]);
+
+    if (existingPemasok.rows.length > 0) {
+      return responsePayload(400, 'nama pemasok sudah ada', null, res);
+    }
+
+    // Validate nama_pemasok type
+    if (typeof data.nama_pemasok !== 'string') {
+      return responsePayload(400, 'nama pemasok harus berupa string', null, res);
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^[0-9]+$/;
+    if (!phoneRegex.test(data.telepon)) {
+      return responsePayload(400, 'nomor telepon harus berupa angka', null, res);
+    }
+
+    // Validate phone number length
+    if (data.telepon.length !== 12) {
+      return responsePayload(400, 'nomor telepon harus 12 digit', null, res);
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+      return responsePayload(400, 'format email tidak valid', null, res);
+    }
+
+    const query = `
+      INSERT INTO pemasok 
+      (id_pemasok, nama_pemasok, alamat, telepon, email, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *
+    `;
+
+    const values = [id, data.nama_pemasok, data.alamat, data.telepon, data.email];
+    const result = await db.query(query, values);
+
+    return responsePayload(201, 'data berhasil disimpan', result.rows[0], res);
+  } catch (error) {
+    console.error('Error:', error);
+    return responsePayload(500, 'gagal menyimpan data', null, res);
+  }
 });
 
 /* put pemasok */
-router.put('/:id', (req, res) => {
-  const id = req.params.id;
-  const data = req.body;
-  const updated_at = new Date();
-  const query = `UPDATE pemasok SET nama_pemasok = $1, alamat = $2, telepon = $3, email = $4, updated_at = $5 WHERE id_pemasok = $6 RETURNING *`;
-  const values = [data.nama_pemasok, data.alamat, data.telepon, data.email, updated_at, id];
-  db.query(query, values, (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal mengubah data', null, res);
-      return;
+router.put('/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const data = req.body;
+
+    // Validate required fields
+    if (!data || !data.nama_pemasok || !data.alamat || !data.telepon || !data.email) {
+      return responsePayload(400, 'data tidak valid', null, res);
     }
-    if (result.rows.length === 0) {
-      responsePayload(404, 'data pemasok tidak ditemukan', null, res);
-      return;
+
+    // Check if pemasok exists
+    const existingPemasok = await db.query('SELECT * FROM pemasok WHERE id_pemasok = $1', [id]);
+    if (!existingPemasok.rows.length) {
+      return responsePayload(404, 'data pemasok tidak ditemukan', null, res);
     }
-    const payload = result.rows[0];
-    responsePayload(200, 'data pemasok berhasil diubah', payload, res);
-  });
+
+    //validasi jika nama pemasok sudah ada
+    const existingPemasokName = await db.query(
+      'SELECT * FROM pemasok WHERE nama_pemasok = $1 AND id_pemasok != $2',
+      [data.nama_pemasok, id]
+    );
+    if (existingPemasokName.rows.length > 0) {
+      return responsePayload(400, 'nama pemasok sudah ada', null, res);
+    }
+
+    // Validate nama_pemasok type
+    if (typeof data.nama_pemasok !== 'string') {
+      return responsePayload(400, 'nama pemasok harus berupa string', null, res);
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^[0-9]+$/;
+    if (!phoneRegex.test(data.telepon)) {
+      return responsePayload(400, 'nomor telepon harus berupa angka', null, res);
+    }
+
+    // Validate phone number length
+    if (data.telepon.length > 12) {
+      return responsePayload(400, 'nomor telepon harus 12 digit', null, res);
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+      return responsePayload(400, 'format email tidak valid, abc@gmail.com', null, res);
+    }
+
+    // Update pemasok
+    const query = `
+      UPDATE pemasok 
+      SET nama_pemasok = $1, 
+          alamat = $2, 
+          telepon = $3, 
+          email = $4, 
+          updated_at = CURRENT_TIMESTAMP 
+      WHERE id_pemasok = $5 
+      RETURNING *
+    `;
+
+    const values = [data.nama_pemasok, data.alamat, data.telepon, data.email, id];
+    const result = await db.query(query, values);
+
+    return responsePayload(200, 'data berhasil diubah', result.rows[0], res);
+  } catch (error) {
+    console.error('Error:', error);
+    return responsePayload(500, 'gagal mengubah data', null, res);
+  }
 });
 
 /* delete pemasok */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = req.params.id;
 
   //cek jika id tidak ada

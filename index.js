@@ -13,10 +13,16 @@ app.use(express.json());
 const kategori = require('./routes/kategori');
 const pemasok = require('./routes/pemasok');
 const sparepart = require('./routes/sparepart');
+const pembelian = require('./routes/pembelian');
+const customer = require('./routes/customer');
+const penjualan = require('./routes/penjualan');
 //use routes
 app.use('/kategori', kategori);
 app.use('/pemasok', pemasok);
 app.use('/sparepart', sparepart);
+app.use('/pembelian', pembelian);
+app.use('/customer', customer);
+app.use('/penjualan', penjualan);
 
 app.get('/', (req, res) => {
   res.send('Hello, World!');

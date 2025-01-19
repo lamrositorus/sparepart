@@ -7,7 +7,8 @@
     "dev": "nodemon index.js",
     "lint": "eslint .",
     "fix": "eslint --fix .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "migrate": "knex migrate:latest"
   },
   "keywords": [],
   "author": "",
