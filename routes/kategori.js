@@ -29,6 +29,10 @@ router.post('/', async (req, res) => {
     if (!data || !data.nama_kategori || !data.deskripsi) {
       return responsePayload(400, 'data tidak valid', null, res);
     }
+    //validasi nama_kategori harus lebih dari 3 karakter
+    if (data.nama_kategori.length < 3) {
+      return responsePayload(400, 'nama kategori harus lebih dari 3 karakter', null, res);
+    }
 
     // Check for existing category name
     const checkResult = await db.query('SELECT * FROM kategori WHERE nama_kategori = $1', [
@@ -64,7 +68,6 @@ router.get('/:id', async (req, res) => {
   if (!id) {
     return responsePayload(400, 'id tidak valid', null, res);
   }
-
   try {
     const result = await db.query('SELECT * FROM kategori WHERE id_kategori = $1', [id]);
     if (result.rows.length === 0) {

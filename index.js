@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const PORT = 4000;
 const cors = require('cors');
+const verifyToken = require('./middleware/verifikasiToken');
 
 //middleware untuk mengizinkan permintaan dari domain yang berbeda
 app.use(cors());
@@ -16,13 +17,20 @@ const sparepart = require('./routes/sparepart');
 const pembelian = require('./routes/pembelian');
 const customer = require('./routes/customer');
 const penjualan = require('./routes/penjualan');
+const historyPenjualan = require('./routes/historyPenjualan');
+const historyPembelian = require('./routes/historyPembelian');
+const user = require('./routes/user');
+
 //use routes
-app.use('/kategori', kategori);
-app.use('/pemasok', pemasok);
-app.use('/sparepart', sparepart);
-app.use('/pembelian', pembelian);
-app.use('/customer', customer);
-app.use('/penjualan', penjualan);
+app.use('/kategori', verifyToken, kategori);
+app.use('/pemasok', verifyToken, pemasok);
+app.use('/sparepart', verifyToken, sparepart);
+app.use('/pembelian', verifyToken, pembelian);
+app.use('/customer', verifyToken, customer);
+app.use('/penjualan', verifyToken, penjualan);
+app.use('/historyPenjualan', verifyToken, historyPenjualan);
+app.use('/historyPembelian', verifyToken, historyPembelian);
+app.use('/user', user);
 
 app.get('/', (req, res) => {
   res.send('Hello, World!');

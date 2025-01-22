@@ -15,7 +15,8 @@ exports.up = function (knex) {
     table.integer('jumlah').notNullable();
     table.decimal('total_harga', 10, 2).notNullable();
     table.date('tanggal').notNullable();
-    table.timestamps(true, true); // created_at dan updated_at
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
   });
 };
 

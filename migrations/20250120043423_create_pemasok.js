@@ -6,7 +6,8 @@ exports.up = function (knex) {
     table.string('alamat', 255).nullable();
     table.string('telepon', 15).nullable();
     table.string('email', 100).nullable();
-    table.timestamps(true, true);
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
   });
 };
 

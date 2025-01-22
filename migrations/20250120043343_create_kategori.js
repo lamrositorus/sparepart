@@ -4,7 +4,8 @@ exports.up = function (knex) {
     table.string('id_kategori', 36).primary(); // Menggunakan VARCHAR
     table.string('nama_kategori', 100).notNullable();
     table.text('deskripsi').nullable();
-    table.timestamps(true, true);
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
   });
 };
 

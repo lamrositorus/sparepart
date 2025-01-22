@@ -16,7 +16,8 @@ exports.up = function (knex) {
     table.integer('jumlah').notNullable();
     table.decimal('total_harga', 10, 2).notNullable();
     table.enu('metode_pembayaran', ['Tunai', 'Kredit', 'Transfer']).notNullable();
-    table.timestamps(true, true);
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
   });
 };
 

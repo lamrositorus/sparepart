@@ -1,12 +1,13 @@
 // migrations/xxxx_create_user_table.js
 exports.up = function (knex) {
   return knex.schema.createTable('user', function (table) {
-    table.increments('id_user').primary();
+    table.string('id_user', 36).primary();
     table.string('username', 100).notNullable().unique();
     table.string('password', 255).notNullable();
     table.string('email', 100).notNullable().unique();
-    table.enu('role', ['Admin', 'User ']).defaultTo('User ');
-    table.timestamps(true, true);
+    table.enu('role', ['Admin', 'Staff']).defaultTo('Staff');
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable(); // Menetapkan default ke waktu saat ini
   });
 };
 

@@ -64,9 +64,9 @@ router.post('/signup', async (req, res) => {
   }
   //validasi role
   const role = data.role;
-  const validRoles = ['Admin', 'User'];
+  const validRoles = ['Admin', 'Staff'];
   if (!validRoles.includes(role)) {
-    responsePayload(400, 'Role tidak valid, pilih salah satu Admin dan user', null, res);
+    responsePayload(400, 'Role tidak valid, pilih salah satu Admin dan Staff', null, res);
     return;
   }
 
@@ -90,30 +90,66 @@ router.post('/login', async (req, res) => {
   const username = data.username;
   const password = data.password;
 
+  // Validasi input
   if (!username || !password) {
-    responsePayload(400, 'username dan password tidak boleh kosong', null, res);
-    return;
+    return responsePayload(400, 'Username dan password tidak boleh kosong', null, res);
   }
 
-  const result = await db.query('SELECT * FROM "user" WHERE username = $1', [username]);
-  if (result.rows.length === 0) {
-    responsePayload(400, 'username tidak ditemukan', null, res);
-    return;
-  }
-  const user = result;
-  const userPassword = user.rows[0].password;
+  try {
+    // Mencari pengguna berdasarkan username
+    const result = await db.query('SELECT * FROM "user" WHERE username = $1', [username]);
+    if (result.rows.length === 0) {
+      return responsePayload(400, 'Username tidak ditemukan', null, res);
+    }
 
-  //validasi password yang di hash
-  const passwordMatch = await bcrypt.compare(password, userPassword);
-  if (!passwordMatch) {
-    responsePayload(400, 'password salah', null, res);
-    return;
+    const user = result.rows[0]; // Ambil pengguna pertama
+    const userPassword = user.password;
+
+    // Validasi password yang di-hash
+    const passwordMatch = await bcrypt.compare(password, userPassword);
+    if (!passwordMatch) {
+      return responsePayload(400, 'Password salah', null, res);
+    }
+    //validasi
+
+    // Generate token
+    const token = jwt.sign({ id: user.id_user }, secretKey, { expiresIn: '1h' });
+
+    // Mengembalikan ID pengguna dan token
+    return responsePayload(200, 'Login berhasil', { id: user.id_user, token }, res);
+  } catch (error) {
+    console.error('Error during login:', error);
+    return responsePayload(500, 'Terjadi kesalahan pada server', null, res);
   }
-  //generate token
-  const token = jwt.sign({ id: user.rows[0].id_user }, secretKey, { expiresIn: '1h' });
-  responsePayload(200, 'login berhasil', { token }, res);
 });
 
+/* update user */
+router.put('/:id', verifyToken, async (req, res) => {
+  const id = req.params.id;
+  const data = req.body;
+  const updated_at = new Date();
+  if (!id || !data) {
+    responsePayload(400, 'id dan data tidak valid', null, res);
+    return;
+  }
+
+  //updated data
+  const query =
+    'UPDATE "user" SET username = $1, password = $2, email = $3, role = $4, updated_at = $5 WHERE id_user = $6 RETURNING *';
+  const values = [data.username, data.password, data.email, data.role, updated_at, id];
+  await db.query(query, values, (err, result) => {
+    if (err) {
+      console.error('Error executing query:', err);
+      responsePayload(500, 'gagal mengupdate data', null, res);
+      return;
+    }
+    if (result.rows.length === 0) {
+      responsePayload(404, 'data tidak ditemukan', null, res);
+      return;
+    }
+    responsePayload(200, 'data berhasil diupdate', result.rows[0], res);
+  });
+});
 /* delete user */
 router.delete('/:id', verifyToken, async (req, res) => {
   const id = req.params.id;

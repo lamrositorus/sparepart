@@ -22,7 +22,8 @@ router.get('/', (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const data = req.body;
-    const id = uuidv4();
+    const id_penjualan = uuidv4(); // ID unik untuk penjualan
+    const id_history_penjualan = uuidv4(); // ID unik untuk riwayat penjualan
 
     // Validasi input
     if (
@@ -33,62 +34,59 @@ router.post('/', async (req, res) => {
       !data.jumlah ||
       !data.metode_pembayaran
     ) {
-      return responsePayload(400, 'data tidak valid', null, res);
+      return responsePayload(400, 'Data tidak valid', null, res);
     }
-    //validasi id_sparepart
+
+    // Validasi sparepart
     const sparepart = await db.query('SELECT * FROM sparepart WHERE id_sparepart = $1', [
       data.id_sparepart,
     ]);
     if (!sparepart.rows.length) {
-      return responsePayload(404, 'sparepart tidak ditemukan', null, res);
+      return responsePayload(404, 'Sparepart tidak ditemukan', null, res);
     }
-    //validasi id_customer
-    const resultCustomer = await db.query('SELECT * FROM customer WHERE id_customer = $1', [
+
+    // Validasi customer
+    const customer = await db.query('SELECT * FROM customer WHERE id_customer = $1', [
       data.id_customer,
     ]);
-    if (!resultCustomer.rows.length) {
-      return responsePayload(400, 'customer tidak ditemukan', null, res);
+    if (!customer.rows.length) {
+      return responsePayload(404, 'Customer tidak ditemukan', null, res);
     }
-    //validasi metode_pembayaran
+
+    // Validasi metode pembayaran
     const metodePembayaran = ['Tunai', 'Kredit', 'Transfer'];
     if (!metodePembayaran.includes(data.metode_pembayaran)) {
       return responsePayload(
         400,
-        'metode pembayaran harus tunai, kredit, atau transfer',
+        'Metode pembayaran harus salah satu dari: Tunai, Kredit, Transfer',
         null,
         res
       );
     }
-    // Ambil harga dan cek stok
-    const result = await db.query('SELECT harga, stok FROM sparepart WHERE id_sparepart = $1', [
-      data.id_sparepart,
-    ]);
 
-    if (!result.rows.length) {
-      return responsePayload(404, 'sparepart tidak ditemukan', null, res);
+    // Ambil harga dan stok dari sparepart
+    const sparepartData = sparepart.rows[0];
+    if (sparepartData.stok < data.jumlah) {
+      return responsePayload(400, 'Stok tidak mencukupi', null, res);
     }
 
-    // Validasi stok
-    if (result.rows[0].stok < data.jumlah) {
-      return responsePayload(400, 'stok tidak mencukupi', null, res);
-    }
+    // Hitung total harga, margin, dan keuntungan
+    const total_harga = sparepartData.harga_jual * data.jumlah;
+    const keuntungan_per_unit = sparepartData.harga_jual - sparepartData.harga;
+    const total_keuntungan = keuntungan_per_unit * data.jumlah;
 
-    // Hitung total harga
-    const total_harga = result.rows[0].harga * data.jumlah;
-
-    // Insert penjualan
-    const query = `
-        INSERT INTO penjualan (
-          id_penjualan, id_sparepart, id_customer, 
-          tanggal, jumlah, total_harga, metode_pembayaran, 
-          created_at, updated_at
-        ) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
-        RETURNING *
-      `;
-
-    const values = [
-      id,
+    // Simpan data penjualan
+    const queryPenjualan = `
+      INSERT INTO penjualan (
+        id_penjualan, id_sparepart, id_customer, 
+        tanggal, jumlah, total_harga, metode_pembayaran, 
+        created_at, updated_at
+      ) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+      RETURNING *;
+    `;
+    const valuesPenjualan = [
+      id_penjualan,
       data.id_sparepart,
       data.id_customer,
       data.tanggal,
@@ -96,30 +94,58 @@ router.post('/', async (req, res) => {
       total_harga,
       data.metode_pembayaran,
     ];
+    const penjualanResult = await db.query(queryPenjualan, valuesPenjualan);
 
-    const penjualan = await db.query(query, values);
-
-    // Update stok
+    // Update stok sparepart
     await db.query(
       'UPDATE sparepart SET stok = stok - $1, updated_at = CURRENT_TIMESTAMP WHERE id_sparepart = $2',
       [data.jumlah, data.id_sparepart]
     );
 
-    // Insert ke history penjualan
-    await db.query(
-      `INSERT INTO history_penjualan (
-              id_history_penjualan,
-              id_penjualan, id_customer, id_sparepart, 
-              jumlah, total_harga, tanggal, 
-              created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6,$7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      [id, id, data.id_customer, data.id_sparepart, data.jumlah, total_harga, data.tanggal]
-    );
+    // Ambil data dari penjualan
+    const { id_customer, id_sparepart, jumlah, created_at, updated_at } = penjualanResult.rows[0];
+    const harga_beli = sparepartData.harga; // Pastikan ini tidak null
+    const harga_jual = sparepartData.harga_jual;
+    const margin = sparepartData.margin;
 
-    return responsePayload(201, 'data berhasil disimpan', penjualan.rows[0], res);
+    // Validasi harga_beli
+    if (harga_beli === null) {
+      return responsePayload(400, 'Harga beli tidak ditemukan untuk sparepart', null, res);
+    }
+
+    const keuntungan = total_harga - harga_beli * jumlah;
+    const total_harga_penjualan = harga_jual * jumlah;
+
+    // Simpan data ke history_penjualan
+    const queryHistoryPenjualan = `
+      INSERT INTO history_penjualan (
+        id_history_penjualan, id_penjualan, id_customer, id_sparepart, 
+        jumlah, harga_beli, harga_jual, margin, keuntungan, 
+        total_harga, tanggal, created_at, updated_at
+      ) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+      RETURNING *;
+    `;
+    const valuesHistoryPenjualan = [
+      id_history_penjualan,
+      id_penjualan,
+      id_customer,
+      id_sparepart,
+      jumlah,
+      harga_beli,
+      harga_jual,
+      margin,
+      keuntungan,
+      total_harga_penjualan,
+      data.tanggal,
+    ];
+    const historyPenjualanResult = await db.query(queryHistoryPenjualan, valuesHistoryPenjualan);
+
+    // Response sukses
+    return responsePayload(200, 'Data berhasil disimpan', historyPenjualanResult.rows[0], res);
   } catch (error) {
     console.error('Error:', error);
-    return responsePayload(500, 'gagal menyimpan data', null, res);
+    return responsePayload(500, 'Gagal menyimpan data', error.message, res);
   }
 });
 
