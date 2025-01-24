@@ -3,6 +3,7 @@
 This project is a migration setup for a Sparepart Management System using Express.js, Knex.js, and PostgreSQL. The system manages various entities such as spare parts, suppliers, customers, and sales/purchase histories.
 
 ## Table of Contents
+
 1. [Prerequisites](#prerequisites)
 2. [Installation](#installation)
 3. [Usage](#usage)
@@ -11,6 +12,7 @@ This project is a migration setup for a Sparepart Management System using Expres
 6. [Support](#support)
 
 ## Prerequisites
+
 1. **Node.js** (v14 or later)
 2. **PostgreSQL** (Installed and running)
 3. **Knex.js** (Installed via npm)
@@ -19,71 +21,78 @@ This project is a migration setup for a Sparepart Management System using Expres
 ## Installation
 
 1. Clone the repository:
-    ```bash
-    git clone <repository-url>
-    cd <project-directory>
-    ```
+
+   ```bash
+   git clone <repository-url>
+   cd <project-directory>
+   ```
 
 2. Install dependencies:
-    ```bash
-    npm install
-    ```
+
+   ```bash
+   npm install
+   ```
 
 3. Create a new PostgreSQL database:
-    ```sql
-    CREATE DATABASE sparepart;
-    ```
+
+   ```sql
+   CREATE DATABASE sparepart;
+   ```
 
 4. Configure the PostgreSQL database connection in `knexfile.js` and `db.js`.
 
 5. Run the migrations:
-    ```bash
-    npx knex migrate:latest
-    ```
+   ```bash
+   npx knex migrate:latest
+   ```
 
 ## Usage
 
 ### Running the Application
+
 1. Start the Express server:
-    ```bash
-    npm start
-    ```
+
+   ```bash
+   npm start
+   ```
 
 2. The application will be accessible at `http://localhost:3000` (default port). Update the port in the `app.js` file if needed.
 
 3. Use a database client (e.g., pgAdmin or DBeaver) to interact with the database or access the API endpoints.
 
 ### Sample API Endpoints
+
 - **List all spare parts:**
-    ```http
-    GET /api/spareparts
-    ```
+  ```http
+  GET /api/spareparts
+  ```
 - **Add a new spare part:**
-    ```http
-    POST /api/spareparts
-    ```
-    **Body:**
-    ```json
-    {
-      "nama_sparepart": "Example Sparepart",
-      "harga": 10000,
-      "margin": 2000,
-      "harga_jual": 12000,
-      "stok": 50
-    }
-    ```
+  ```http
+  POST /api/spareparts
+  ```
+  **Body:**
+  ```json
+  {
+    "nama_sparepart": "Example Sparepart",
+    "harga": 10000,
+    "margin": 2000,
+    "harga_jual": 12000,
+    "stok": 50
+  }
+  ```
 - **Update stock:**
-    ```http
-    PUT /api/spareparts/:id
-    ```
+  ```http
+  PUT /api/spareparts/:id
+  ```
 - **Delete a spare part:**
-    ```http
-    DELETE /api/spareparts/:id
-    ```
+  ```http
+  DELETE /api/spareparts/:id
+  ```
 
 ## Migrations Explanation
 
 ### 1. `history_pembelian`
+
 - **Purpose**: Tracks purchase history of spare parts.
 - **Columns**:
   - `id_history_pembelian`: Primary key.
@@ -95,6 +104,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `tanggal`: Date of purchase.
 
 ### 2. `history_penjualan`
+
 - **Purpose**: Tracks sales history of spare parts.
 - **Columns**:
   - `id_history_penjualan`: Primary key.
@@ -109,6 +119,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `total_harga`: Total sale amount.
 
 ### 3. `user`
+
 - **Purpose**: Manages application users.
 - **Columns**:
   - `id_user`: Primary key.
@@ -118,6 +129,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `role`: Role of the user (Admin or Staff).
 
 ### 4. `penjualan`
+
 - **Purpose**: Records sales transactions.
 - **Columns**:
   - `id_penjualan`: Primary key.
@@ -129,6 +141,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `metode_pembayaran`: Payment method (Cash, Credit, or Transfer).
 
 ### 5. `pembelian`
+
 - **Purpose**: Records purchase transactions.
 - **Columns**:
   - `id_pembelian`: Primary key.
@@ -140,6 +153,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `status`: Purchase status (Pending, Completed, or Cancelled).
 
 ### 6. `customer`
+
 - **Purpose**: Manages customer data.
 - **Columns**:
   - `id_customer`: Primary key.
@@ -149,6 +163,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `email`: Customer email.
 
 ### 7. `sparepart`
+
 - **Purpose**: Stores spare part information.
 - **Columns**:
   - `id_sparepart`: Primary key.
@@ -159,6 +174,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `stok`: Quantity in stock.
 
 ### 8. `pemasok`
+
 - **Purpose**: Manages supplier data.
 - **Columns**:
   - `id_pemasok`: Primary key.
@@ -168,6 +184,7 @@ This project is a migration setup for a Sparepart Management System using Expres
   - `email`: Supplier email.
 
 ### 9. `kategori`
+
 - **Purpose**: Categorizes spare parts.
 - **Columns**:
   - `id_kategori`: Primary key.
@@ -177,6 +194,7 @@ This project is a migration setup for a Sparepart Management System using Expres
 ## Database Connection
 
 Located in the `db.js` file:
+
 ```javascript
 const { Client } = require('pg');
 

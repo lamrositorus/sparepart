@@ -44,7 +44,14 @@ router.post('/', async (req, res) => {
     if (!sparepart.rows.length) {
       return responsePayload(404, 'Sparepart tidak ditemukan', null, res);
     }
-
+    //validasi jumlah tidak boleh kurang dari 1
+    if (data.jumlah < 1) {
+      return responsePayload(400, 'jumlah tidak boleh kurang dari 1', null, res);
+    }
+    //validasi jumlah tidak boleh lebih dari stok
+    if (data.jumlah > sparepart.rows[0].stok) {
+      return responsePayload(400, 'jumlah tidak boleh lebih dari stok', null, res);
+    }
     // Validasi customer
     const customer = await db.query('SELECT * FROM customer WHERE id_customer = $1', [
       data.id_customer,
