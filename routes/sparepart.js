@@ -7,6 +7,11 @@ const { v4: uuidv4 } = require('uuid');
 /* GET all spareparts */
 router.get('/', async (req, res) => {
   const result = await db.query('SELECT * FROM sparepart');
+  //kondisi jika gagal fetching api
+  if (result.error){
+    console.error(result.error);
+    return responsePayload(500, 'gagal mengambil data', null, res);
+  }
   if (result.rows.length === 0) {
     return responsePayload(200, 'data tidak ditemukan', null, res);
   }

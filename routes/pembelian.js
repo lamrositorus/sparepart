@@ -84,7 +84,7 @@ router.post('/', async (req, res) => {
     const sparepart = await db.query('SELECT harga, stok FROM sparepart WHERE id_sparepart = $1', [
       data.id_sparepart,
     ]);
-    const harga = sparepart.rows[0].harga;    
+    const harga = sparepart.rows[0].harga;
 
     // Validasi total_harga tidak boleh lebih dari stok * harga
     const total_harga = harga * data.jumlah;
@@ -138,7 +138,6 @@ router.post('/', async (req, res) => {
       const queryUpdateStok = 'UPDATE sparepart SET stok = stok - $1 WHERE id_sparepart = $2';
       await db.query(queryUpdateStok, [data.jumlah, data.id_sparepart]);
     }
-    
 
     responsePayload(201, 'data berhasil disimpan', pembelianHistory.rows[0], res);
   } catch (err) {
@@ -175,10 +174,11 @@ router.put('/:id', async (req, res) => {
     const statusLama = pembelianLama.rows[0].status; // Ambil status lama
 
     // Update status pembelian
-    const query = 'UPDATE pembelian SET status = $1, updated_at = $2 WHERE id_pembelian = $3 RETURNING *';
+    const query =
+      'UPDATE pembelian SET status = $1, updated_at = $2 WHERE id_pembelian = $3 RETURNING *';
     const values = [status, updated_at, id];
     const result = await db.query(query, values);
-    
+
     if (result.rows.length === 0) {
       responsePayload(404, 'data tidak ditemukan', null, res);
       return;
