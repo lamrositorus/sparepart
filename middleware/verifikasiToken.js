@@ -7,7 +7,7 @@ const verifyToken = (req, res, next) => {
   const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
 
   if (!token) {
-    return res.status(400).json({ message: 'token tidak ditemukan' });
+    return res.status(401).json({ message: 'token tidak ditemukan' });
   }
   jwt.verify(token, secretKey, (err, decoded) => {
     if (err) {

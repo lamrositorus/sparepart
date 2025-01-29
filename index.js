@@ -45,9 +45,14 @@ process.on('uncaughtException', (err) => {
   console.log(`Logged Error: ${err}`);
 });
 app.use((err, req, res, next) => {
-  console.error('error cuy: ',err.stack);
+  console.error('error cuy: ', err.stack);
   res.status(500).send('Something broke!');
 });
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}

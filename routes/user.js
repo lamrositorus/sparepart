@@ -11,14 +11,23 @@ require('dotenv').config();
 const secretKey = process.env.SECRET_KEY;
 console.log('key saat login: ', secretKey);
 /* Get users */
+// routes/user.js
 router.get('/', verifyToken, async (req, res) => {
-  const result = await db.query('SELECT * FROM "user"');
-  if (result.rows.length === 0) {
-    responsePayload(200, 'data tidak ditemukan', null, res);
-    return;
+  if (req.user.role !== 'Admin') {
+    return res.status(403).json({ message: 'Anda tidak memiliki akses' });
   }
 
-  responsePayload(200, 'berhasil mengambil data', result.rows, res);
+  try {
+    const result = await db.query('SELECT * FROM "user"');
+    if (result.rows.length === 0) {
+      return res.status(200).json([]); // Mengembalikan array kosong jika tidak ada data
+    }
+
+    return res.status(200).json(result.rows); // Mengembalikan data pengguna
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return res.status(500).json({ message: 'Terjadi kesalahan pada server' });
+  }
 });
 
 /* Post create user */
@@ -107,6 +116,7 @@ router.post('/login', async (req, res) => {
 
     // Validasi password yang di-hash
     const passwordMatch = await bcrypt.compare(password, userPassword);
+    console.log('password: ' + passwordMatch);
     if (!passwordMatch) {
       return responsePayload(400, 'Password salah', null, res);
     }
