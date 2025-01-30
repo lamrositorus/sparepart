@@ -11,6 +11,10 @@ router.get('/', (req, res) => {
       responsePayload(500, 'gagal mengambil data', null, res);
       return;
     }
+    if (result.rows.length === 0) {
+      responsePayload(200, 'data tidak ditemukan', null, res);
+      return;
+    }
     responsePayload(200, 'data customer berhasil diambil', result.rows, res);
   });
 });

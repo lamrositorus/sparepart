@@ -101,11 +101,10 @@ router.put('/:id', async (req, res) => {
     }
 
     //validasi jika nama pemasok sudah ada
-    const existingPemasokName = await db.query(
-      'SELECT * FROM pemasok WHERE nama_pemasok = $1 AND id_pemasok != $2',
-      [data.nama_pemasok, id]
-    );
-    if (existingPemasokName.rows.length > 0) {
+    const existingNamaPemasok = await db.query('SELECT * FROM pemasok WHERE nama_pemasok = $1', [
+      data.nama_pemasok,
+    ]);
+    if (existingNamaPemasok.rows.length > 0) {
       return responsePayload(400, 'nama pemasok sudah ada', null, res);
     }
 

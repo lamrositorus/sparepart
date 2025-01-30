@@ -6,6 +6,19 @@ const secretKey = process.env.SECRET_KEY;
 
 const token = jwt.sign({ id: 'user_id', role: 'Admin' }, secretKey);
 
+describe('GET /customer', () => {
+  //uji jika gagal mengambil data
+  it('should return 200 if data is empty', async () => {
+    const response = await request(app).get('/customer').set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+  });
+  //uji jika berhasil mengambil data
+  it('should return 200 if data is found', async () => {
+    const response = await request(app).get('/customer').set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+  });
+});
+
 describe('POST /customer', () => {
   // Uji jika data tidak valid
   it('should return 400 if data is invalid', async () => {
