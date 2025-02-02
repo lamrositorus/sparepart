@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../connection');
+const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
 /* get history penjualan */

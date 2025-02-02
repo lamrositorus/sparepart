@@ -7,7 +7,7 @@ const token = jwt.sign({ id: 'user_id', role: 'Admin' }, secretKey);
 
 //dapetin id pemasok
 let testPemasokId = 'c2e739e6-7c45-4e8c-ba51-7de61a32da32';
-let idPemasok = 'b8ed03b0-88a0-4e75-9af6-2f978af56338'
+let idPemasok = 'b8ed03b0-88a0-4e75-9af6-2f978af56338';
 
 describe('GET /pemasok', () => {
   //uji jika gagal mengambil data
@@ -134,7 +134,7 @@ describe('PUT /pemasok/:id', () => {
         telepon: '08123456789',
         email: 'pemasokbaru@example.com',
       });
-      console.log(response.body);
+    console.log(response.body);
     expect(response.status).toBe(200);
-  });  
+  });
 });

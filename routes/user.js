@@ -1,21 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../connection');
+const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middleware/verifikasiToken');
+const passport = require('passport');
 require('dotenv').config();
+const redis = require('../connection/redis');
+const redisClient = require('../connection/redis');
 
 const secretKey = process.env.SECRET_KEY;
 console.log('key saat login: ', secretKey);
 /* Get users */
 // routes/user.js
 router.get('/', verifyToken, async (req, res) => {
-  if (req.user.role !== 'Admin') {
-    return res.status(403).json({ message: 'Anda tidak memiliki akses' });
-  }
+  // if (req.user.role !== 'Admin') {
+  //   return res.status(403).json({ message: 'Anda tidak memiliki akses' });
+  // }
 
   try {
     const result = await db.query('SELECT * FROM "user"');
@@ -30,6 +33,64 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
+// Route untuk memulai autentikasi Google
+router.get(
+  '/auth/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'], // Request akses ke profil dan email
+  })
+);
+
+// In user.js, update the callback route:
+router.get(
+  '/auth/google/callback',
+  passport.authenticate('google', { session: false }),
+  (req, res) => {
+    // Redirect with token in Authorization header
+    res.redirect(
+      `http://localhost:5173/user/login?token=${req.user.token}&id_user=${req.user.id_user}`
+    );
+  }
+);
+
+/* Get user by id */
+router.get('/:id', verifyToken, async (req, res) => {
+  const id = req.params.id;
+  if (!id) {
+    responsePayload(400, 'id tidak valid', null, res);
+    return;
+  }
+  //validasi jika gagal mengambil data
+  const result = await db.query('SELECT * FROM "user" WHERE id_user = $1', [id]);
+  if (result.rows.length === 0) {
+    responsePayload(404, 'data tidak ditemukan', null, res);
+    return;
+  }
+  //cek data apakah ada di redis
+  try {
+    const result = await db.query('SELECT * FROM "user" WHERE id_user = $1', [id]);
+    if (result.rows.length === 0) {
+      responsePayload(404, 'data tidak ditemukan', null, res);
+      redisClient.get(id, async (err, data) => {
+        if (err) {
+          console.error('Error fetching data from Redis:', err);
+          responsePayload(500, 'Terjadi kesalahan pada server', null, res);
+          return;
+        }
+        if (data) {
+          responsePayload(200, 'data ditemukan', result.rows[0], res);
+          redisClient.set(id, JSON.stringify(result.rows[0]));
+        }
+        console.log('Data tidak ditemukan di Redis');
+      });
+      return;
+    }
+    responsePayload(200, 'data ditemukan', result.rows[0], res);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    responsePayload(500, 'Terjadi kesalahan pada server', null, res);
+  }
+});
 /* Post create user */
 router.post('/signup', async (req, res) => {
   const data = req.body;

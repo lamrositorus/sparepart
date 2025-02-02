@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../index'); // Impor aplikasi dari index.js
-const db = require('../connection');
+const db = require('../connection/connection');
 const jwt = require('jsonwebtoken');
 
 describe('GET /user', () => {

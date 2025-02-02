@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../connection');
+const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
 
@@ -94,6 +94,10 @@ router.put('/:id', async (req, res) => {
   //periksa jika data tidak ada
   if (!data || !data.nama_kategori || !data.deskripsi) {
     return responsePayload(400, 'data tidak valid', null, res);
+  }
+  //validasi nama_kategori harus lebih dari 3 karakter
+  if (data.nama_kategori.length < 3) {
+    return responsePayload(400, 'nama kategori harus lebih dari 3 karakter', null, res);
   }
 
   try {

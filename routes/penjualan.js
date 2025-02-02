@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../connection');
+const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
 
@@ -16,6 +16,27 @@ router.get('/', (req, res) => {
     }
     responsePayload(200, 'data berhasil diambil', result.rows, res);
   });
+});
+/* Endpoint ini mengembalikan statistik penjualan per bulan, misalnya jumlah transaksi, total penjualan, dan total keuntungan. */
+router.get('/stats', async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        EXTRACT(MONTH FROM tanggal) AS bulan,
+        COUNT(*) AS jumlah_transaksi,
+        SUM(total_harga) AS total_penjualan,
+        SUM(keuntungan) AS total_keuntungan
+      FROM history_penjualan
+      GROUP BY bulan
+      ORDER BY bulan;
+    `;
+    const result = await db.query(query);
+    responsePayload(200, 'statistik penjualan berhasil diambil', result.rows, res);
+    return;
+  } catch (error) {
+    console.error('Error:', error);
+    return responsePayload(500, 'gagal mengambil statistik penjualan', null, res);
+  }
 });
 
 /* post penjualan */

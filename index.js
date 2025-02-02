@@ -3,7 +3,10 @@ const app = express();
 const PORT = 4000;
 const cors = require('cors');
 const verifyToken = require('./middleware/verifikasiToken');
-
+const session = require('express-session');
+const passport = require('passport');
+require('./oauth/passport');
+require('dotenv').config();
 //middleware untuk mengizinkan permintaan dari domain yang berbeda
 app.use(cors());
 
@@ -21,6 +24,18 @@ const historyPenjualan = require('./routes/historyPenjualan');
 const historyPembelian = require('./routes/historyPembelian');
 const user = require('./routes/user');
 
+//insialisasi session dan passport
+// Inisialisasi session dan passport
+app.use(
+  session({
+    secret: process.env.SECRET_KEY, // Pastikan SECRET_KEY ada di .env
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }, // Set true jika menggunakan HTTPS
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 //use routes
 app.use('/kategori', verifyToken, kategori);
 app.use('/pemasok', verifyToken, pemasok);
@@ -31,6 +46,11 @@ app.use('/penjualan', verifyToken, penjualan);
 app.use('/historyPenjualan', verifyToken, historyPenjualan);
 app.use('/historyPembelian', verifyToken, historyPembelian);
 app.use('/user', user);
+
+app.use((req, res, next) => {
+  console.log('Session:', req.session);
+  next();
+});
 
 app.get('/', (req, res) => {
   res.send('Hello, World!');

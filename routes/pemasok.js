@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../connection');
+const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
 
@@ -54,11 +54,11 @@ router.post('/', async (req, res) => {
     if (!phoneRegex.test(data.telepon)) {
       return responsePayload(400, 'nomor telepon harus berupa angka', null, res);
     }
-
-    // Validate phone number length
-    if (data.telepon.length !== 12) {
-      return responsePayload(400, 'nomor telepon harus 12 digit', null, res);
+    //validasi telepon min 10 characters
+    if(data.telepon.length < 10) {
+      return responsePayload(400, 'nomor telepon harus lebih dari 10 karakter', null, res);
     }
+
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
