@@ -133,7 +133,7 @@ router.put('/:id', async (req, res) => {
     !data.stok ||
     !data.id_kategori ||
     !data.id_pemasok ||
-    data.margin === undefined
+    (data.margin === undefined || data.margin === null)
   ) {
     return responsePayload(400, 'data tidak valid', null, res);
   }
@@ -171,8 +171,21 @@ router.put('/:id', async (req, res) => {
     updated_at,
     id,
   ];
-  const result = await db.query(query, values);
-  responsePayload(200, 'data berhasil diubah', result.rows[0], res);
+
+  try {
+    const result = await db.query(query, values);
+
+    // Check if the update was successful
+    if (result.rows.length === 0) {
+      return responsePayload(404, 'sparepart tidak ditemukan', null, res);
+    }
+
+    // Return the updated data
+    responsePayload(200, 'data berhasil diubah', result.rows[0], res);
+  } catch (error) {
+    console.error('Error updating sparepart:', error);
+    responsePayload(500, 'gagal memperbarui sparepart', null, res);
+  }
 });
 
 /* DELETE sparepart */
