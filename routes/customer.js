@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
 /* get customer by id */
 router.get('/:id', verifyToken, (req, res) => {
   const id = req.params.id;
-  
+
   db.query('SELECT * FROM customer WHERE id_customer = $1', [id], (err, result) => {
     if (err) {
       responsePayload(500, 'gagal mengambil data', null, res);
@@ -85,7 +85,7 @@ router.post('/', verifyToken, (req, res) => {
     created_at,
     updated_at,
   ];
-  
+
   db.query(query, values, (err, result) => {
     if (err) {
       responsePayload(500, 'gagal menyimpan data', null, res);
@@ -131,7 +131,7 @@ router.put('/:id', verifyToken, (req, res) => {
     return;
   }
 
-  const query = 
+  const query =
     'UPDATE customer SET nama_customer = $1, alamat = $2, telepon = $3, email = $4, updated_at = $5 WHERE id_customer = $6 RETURNING *';
   const values = [data.nama_customer, data.alamat, data.telepon, data.email, updated_at, id];
 

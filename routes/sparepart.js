@@ -133,7 +133,8 @@ router.put('/:id', async (req, res) => {
     !data.stok ||
     !data.id_kategori ||
     !data.id_pemasok ||
-    (data.margin === undefined || data.margin === null)
+    data.margin === undefined ||
+    data.margin === null
   ) {
     return responsePayload(400, 'data tidak valid', null, res);
   }

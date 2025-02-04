@@ -55,10 +55,9 @@ router.post('/', async (req, res) => {
       return responsePayload(400, 'nomor telepon harus berupa angka', null, res);
     }
     //validasi telepon min 10 characters
-    if(data.telepon.length < 10) {
+    if (data.telepon.length < 10) {
       return responsePayload(400, 'nomor telepon harus lebih dari 10 karakter', null, res);
     }
-
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
