@@ -36,3 +36,5 @@ Thumbs.db
 *.tgz
 *.gz
 *.zip
+# Local Netlify folder
+.netlify

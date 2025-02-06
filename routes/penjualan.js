@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
+const { logActivity } = require('../routes/aktivitas');
 
 /* get penjualan */
 router.get('/', (req, res) => {
@@ -65,14 +66,19 @@ router.post('/', async (req, res) => {
     if (!sparepart.rows.length) {
       return responsePayload(404, 'Sparepart tidak ditemukan', null, res);
     }
-    //validasi jumlah tidak boleh kurang dari 1
+
+    // Ambil nama sparepart
+    const sparepartData = sparepart.rows[0];
+    const nama_sparepart = sparepartData.nama_sparepart; // Ambil nama sparepart
+
+    // Validasi jumlah
     if (data.jumlah < 1) {
-      return responsePayload(400, 'jumlah tidak boleh kurang dari 1', null, res);
+      return responsePayload(400, 'Jumlah tidak boleh kurang dari 1', null, res);
     }
-    //validasi jumlah tidak boleh lebih dari stok
-    if (data.jumlah > sparepart.rows[0].stok) {
-      return responsePayload(400, 'jumlah tidak boleh lebih dari stok', null, res);
+    if (data.jumlah > sparepartData.stok) {
+      return responsePayload(400, 'Jumlah tidak boleh lebih dari stok', null, res);
     }
+
     // Validasi customer
     const customer = await db.query('SELECT * FROM customer WHERE id_customer = $1', [
       data.id_customer,
@@ -90,12 +96,6 @@ router.post('/', async (req, res) => {
         null,
         res
       );
-    }
-
-    // Ambil harga dan stok dari sparepart
-    const sparepartData = sparepart.rows[0];
-    if (sparepartData.stok < data.jumlah) {
-      return responsePayload(400, 'Stok tidak mencukupi', null, res);
     }
 
     // Hitung total harga, margin, dan keuntungan
@@ -123,6 +123,22 @@ router.post('/', async (req, res) => {
       data.metode_pembayaran,
     ];
     const penjualanResult = await db.query(queryPenjualan, valuesPenjualan);
+
+    // Log aktivitas dengan nama sparepart
+    const formatRupiah = (amount) => {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    };
+
+    // Menggunakan formatRupiah saat mencatat aktivitas
+    await logActivity(
+      'Penjualan Baru',
+      `Order  ${nama_sparepart} senilai ${formatRupiah(total_harga)}`
+    );
 
     // Update stok sparepart
     await db.query(
@@ -254,6 +270,11 @@ router.put('/:id', async (req, res) => {
       'UPDATE sparepart SET stok = $1, updated_at = CURRENT_TIMESTAMP WHERE id_sparepart = $2',
       [newStock, data.id_sparepart]
     );
+    //masukin ke log activity
+    await logActivity(
+      'Update Penjualan',
+      `Update penjualan #${id} untuk ${nama_sparepart} (stok: ${currentSale.rows[0].jumlah} -> ${newQty})`
+    );
 
     const result = await db.query(query, values);
     return responsePayload(200, 'data berhasil diupdate', result.rows[0], res);
@@ -264,14 +285,40 @@ router.put('/:id', async (req, res) => {
 });
 
 /* delete penjualan */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = req.params.id;
-  db.query('DELETE FROM penjualan WHERE id_penjualan = $1', [id], (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal menghapus data', null, res);
+
+  try {
+    // Hapus penjualan dari database
+    const result = await db.query('DELETE FROM penjualan WHERE id_penjualan = $1 RETURNING *', [
+      id,
+    ]);
+
+    // Cek apakah ada data yang dihapus
+    if (result.rowCount === 0) {
+      return responsePayload(404, 'Data tidak ditemukan', null, res);
     }
-    responsePayload(200, 'data berhasil dihapus', null, res);
-  });
+
+    // Ambil informasi yang diperlukan untuk log aktivitas
+    const deletedSale = result.rows[0];
+    const id_sparepart = deletedSale.id_sparepart; // Ambil id_sparepart dari penjualan yang dihapus
+
+    // Ambil nama sparepart untuk log aktivitas
+    const sparepart = await db.query(
+      'SELECT nama_sparepart FROM sparepart WHERE id_sparepart = $1',
+      [id_sparepart]
+    );
+    const nama_sparepart = sparepart.rows[0]?.nama_sparepart || 'Sparepart tidak ditemukan';
+
+    // Log aktivitas penghapusan
+    await logActivity('Hapus Penjualan', `Order #${id} untuk ${nama_sparepart} telah dihapus`);
+
+    // Response sukses
+    return responsePayload(200, 'Data berhasil dihapus', null, res);
+  } catch (error) {
+    console.error('Error:', error);
+    return responsePayload(500, 'Gagal menghapus data', error.message, res);
+  }
 });
 
 module.exports = router;

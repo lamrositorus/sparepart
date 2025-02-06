@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
-
+const { logActivity } = require('../routes/aktivitas');
 /* get kategori */
 router.get('/', async (req, res) => {
   try {
@@ -52,6 +52,8 @@ router.post('/', async (req, res) => {
     `;
     const values = [id, data.nama_kategori, data.deskripsi, created_at, updated_at];
 
+    //masukin ke log aktivitas
+    await logActivity('menambahkan kategori', `menambahkan kategori ${data.nama_kategori} `);
     const result = await db.query(query, values);
     return responsePayload(201, 'data berhasil disimpan', result.rows[0], res);
   } catch (error) {
@@ -106,6 +108,7 @@ router.put('/:id', async (req, res) => {
       'UPDATE kategori SET nama_kategori = $1, deskripsi = $2, updated_at = $3 WHERE id_kategori = $4 RETURNING *';
     const values = [data.nama_kategori, data.deskripsi, updated_at, id];
     const result = await db.query(query, values);
+    await logActivity('update kategori', `update kategori ${data.nama_kategori} `);
     responsePayload(200, 'data berhasil diupdate', result.rows[0], res);
   } catch (err) {
     console.log(err);
@@ -121,6 +124,8 @@ router.delete('/:id', async (req, res) => {
   if (!id) {
     return responsePayload(400, 'id tidak valid', null, res);
   }
+  data = req.body;
+  console.log('data', data);
 
   try {
     //cek jika data ada
@@ -128,7 +133,8 @@ router.delete('/:id', async (req, res) => {
     if (checkResult.rows.length === 0) {
       return responsePayload(404, 'data tidak ditemukan', null, res);
     }
-
+    //masukin ke log aktivitas
+    await logActivity('hapus kategori', `hapus kategori ${checkResult.rows[0].nama_kategori} `);
     await db.query('DELETE FROM kategori WHERE id_kategori = $1', [id]);
     responsePayload(200, 'data berhasil dihapus', null, res);
   } catch (err) {

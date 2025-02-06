@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
-
+const { logActivity } = require('./aktivitas');
 /* GET all spareparts */
 router.get('/', async (req, res) => {
   const result = await db.query('SELECT * FROM sparepart');
@@ -99,6 +99,8 @@ router.post('/', async (req, res) => {
     created_at,
     updated_at,
   ];
+  await logActivity('CREATE_SPAREPART', `Sparepart ${data.nama_sparepart} berhasil ditambahkan`);
+
   result = await db.query(query, values);
   responsePayload(200, 'data berhasil disimpan', result.rows[0], res);
 });
@@ -180,6 +182,7 @@ router.put('/:id', async (req, res) => {
     if (result.rows.length === 0) {
       return responsePayload(404, 'sparepart tidak ditemukan', null, res);
     }
+    await logActivity('UPDATE_SPAREPART', `Sparepart ${data.nama_sparepart} berhasil diubah`);
 
     // Return the updated data
     responsePayload(200, 'data berhasil diubah', result.rows[0], res);
@@ -200,6 +203,8 @@ router.delete('/:id', async (req, res) => {
   if (result.rowCount === 0) {
     return responsePayload(404, 'sparepart tidak ditemukan', null, res);
   }
+  await logActivity('DELETE_SPAREPART', `Sparepart dengan ID ${id} berhasil dihapus`);
+
   responsePayload(200, 'data berhasil dihapus', result.rows[0], res);
 });
 

@@ -3,15 +3,15 @@ const router = express.Router();
 const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
+const { logActivity } = require('./aktivitas'); // Pastikan untuk mengimpor logActivity
 
 /* get pemasok */
 router.get('/', async (req, res) => {
   const result = await db.query('SELECT * FROM pemasok');
   if (result.rows.length === 0) {
-    responsePayload(200, 'data tidak ditemukan', null, res);
-    return;
+    return responsePayload(200, 'data tidak ditemukan', null, res);
   }
-  responsePayload(200, 'data berhasil diambil', result.rows, res);
+  return responsePayload(200, 'data berhasil diambil', result.rows, res);
 });
 
 /* get pemasok by id */
@@ -19,11 +19,11 @@ router.get('/:id', async (req, res) => {
   const id = req.params.id;
   const result = await db.query('SELECT * FROM pemasok WHERE id_pemasok = $1', [id]);
   if (result.rows.length === 0) {
-    responsePayload(404, 'data tidak ditemukan', null, res);
-    return;
+    return responsePayload(404, 'data tidak ditemukan', null, res);
   }
-  responsePayload(200, 'data berhasil diambil', result.rows[0], res);
+  return responsePayload(200, 'data berhasil diambil', result.rows[0], res);
 });
+
 /* post pemasok */
 router.post('/', async (req, res) => {
   try {
@@ -54,7 +54,8 @@ router.post('/', async (req, res) => {
     if (!phoneRegex.test(data.telepon)) {
       return responsePayload(400, 'nomor telepon harus berupa angka', null, res);
     }
-    //validasi telepon min 10 characters
+
+    // Validate telepon min 10 characters
     if (data.telepon.length < 10) {
       return responsePayload(400, 'nomor telepon harus lebih dari 10 karakter', null, res);
     }
@@ -74,6 +75,9 @@ router.post('/', async (req, res) => {
 
     const values = [id, data.nama_pemasok, data.alamat, data.telepon, data.email];
     const result = await db.query(query, values);
+
+    // Log aktivitas
+    await logActivity('Tambah Pemasok', `Pemasok baru: ${data.nama_pemasok}`);
 
     return responsePayload(201, 'data berhasil disimpan', result.rows[0], res);
   } catch (error) {
@@ -99,7 +103,7 @@ router.put('/:id', async (req, res) => {
       return responsePayload(404, 'data pemasok tidak ditemukan', null, res);
     }
 
-    //validasi jika nama pemasok sudah ada
+    // Validasi jika nama pemasok sudah ada
     const existingNamaPemasok = await db.query('SELECT * FROM pemasok WHERE nama_pemasok = $1', [
       data.nama_pemasok,
     ]);
@@ -144,6 +148,9 @@ router.put('/:id', async (req, res) => {
     const values = [data.nama_pemasok, data.alamat, data.telepon, data.email, id];
     const result = await db.query(query, values);
 
+    // Log aktivitas
+    await logActivity('Update Pemasok', `Update pemasok: ${data.nama_pemasok}`);
+
     return responsePayload(200, 'data berhasil diubah', result.rows[0], res);
   } catch (error) {
     console.error('Error:', error);
@@ -155,27 +162,29 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const id = req.params.id;
 
-  //cek jika id tidak ada
+  // Cek jika id tidak ada
   const checkQuery = 'SELECT * FROM pemasok WHERE id_pemasok = $1';
-  db.query(checkQuery, [id], (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal menghapus data', null, res);
-      return;
-    }
-    if (result.rows.length === 0) {
-      responsePayload(404, 'data pemasok tidak ditemukan', null, res);
-      return;
+  try {
+    const checkResult = await db.query(checkQuery, [id]);
+    if (checkResult.rows.length === 0) {
+      return responsePayload(404, 'data pemasok tidak ditemukan', null, res);
     }
 
-    const query = `DELETE FROM pemasok WHERE id_pemasok = $1`;
-    db.query(query, [id], (err, result) => {
-      if (err) {
-        responsePayload(500, 'gagal menghapus data', null, res);
-        return;
-      }
-      responsePayload(200, 'data pemasok berhasil dihapus', null, res);
-    });
-  });
+    // Ambil nama pemasok untuk log aktivitas
+    const nama_pemasok = checkResult.rows[0].nama_pemasok;
+
+    // Hapus pemasok
+    const query = 'DELETE FROM pemasok WHERE id_pemasok = $1';
+    await db.query(query, [id]);
+
+    // Log aktivitas penghapusan
+    await logActivity('Hapus P emasok', `Hapus pemasok: ${nama_pemasok}`);
+
+    return responsePayload(200, 'data pemasok berhasil dihapus', null, res);
+  } catch (error) {
+    console.error('Error:', error);
+    return responsePayload(500, 'gagal menghapus data', null, res);
+  }
 });
 
 module.exports = router;

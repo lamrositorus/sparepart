@@ -5,6 +5,7 @@ const cors = require('cors');
 const verifyToken = require('./middleware/verifikasiToken');
 const session = require('express-session');
 const passport = require('passport');
+const serverless = require('serverless-http');
 require('./oauth/passport');
 require('dotenv').config();
 //middleware untuk mengizinkan permintaan dari domain yang berbeda
@@ -22,6 +23,9 @@ const customer = require('./routes/customer');
 const penjualan = require('./routes/penjualan');
 const historyPenjualan = require('./routes/historyPenjualan');
 const historyPembelian = require('./routes/historyPembelian');
+const exportData = require('./routes/exportData');
+const dashboard = require('./routes/Dashboard');
+const aktivitas = require('./routes/aktivitas').router;
 const user = require('./routes/user');
 
 //insialisasi session dan passport
@@ -45,6 +49,9 @@ app.use('/customer', verifyToken, customer);
 app.use('/penjualan', verifyToken, penjualan);
 app.use('/historyPenjualan', verifyToken, historyPenjualan);
 app.use('/historyPembelian', verifyToken, historyPembelian);
+app.use('/export', verifyToken, exportData);
+app.use('/dashboard', verifyToken, dashboard);
+app.use('/aktivitas', aktivitas);
 app.use('/user', user);
 
 app.use((req, res, next) => {
@@ -69,7 +76,7 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something broke!');
 });
 
-module.exports = app;
+module.exports = serverless(app);
 
 if (require.main === module) {
   app.listen(PORT, () => {

@@ -3,7 +3,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const db = require('../connection/connection');
 const responsePayload = require('../payload');
-
+const { logActivity } = require('../routes/aktivitas');
 /* get pembelian */
 router.get('/', async (req, res) => {
   try {
@@ -138,6 +138,10 @@ router.post('/', async (req, res) => {
       const queryUpdateStok = 'UPDATE sparepart SET stok = stok - $1 WHERE id_sparepart = $2';
       await db.query(queryUpdateStok, [data.jumlah, data.id_sparepart]);
     }
+    await logActivity(
+      'CREATE_PEMBELIAN',
+      `Pembelian baru dengan ID ${id_pembelian} berhasil disimpan`
+    );
 
     responsePayload(201, 'data berhasil disimpan', pembelianHistory.rows[0], res);
   } catch (err) {
@@ -201,6 +205,10 @@ router.put('/:id', async (req, res) => {
         id_sparepart,
       ]);
     }
+    await logActivity(
+      'UPDATE_PEMBELIAN',
+      `Status pembelian dengan ID ${id} berhasil diupdate menjadi ${status}`
+    );
 
     responsePayload(200, 'status berhasil diupdate', result.rows[0], res);
   } catch (err) {
@@ -218,6 +226,8 @@ router.delete('/:id', async (req, res) => {
   }
   try {
     await db.query('DELETE FROM pembelian WHERE id_pembelian = $1', [id]);
+    await logActivity('DELETE_PEMBELIAN', `Pembelian dengan ID ${id} berhasil dihapus`);
+
     responsePayload(200, 'data berhasil dihapus', null, res);
   } catch (err) {
     responsePayload(500, 'gagal menghapus data', null, res);

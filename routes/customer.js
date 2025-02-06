@@ -4,7 +4,7 @@ const db = require('../connection/connection');
 const responsePayload = require('../payload');
 const { v4: uuidv4 } = require('uuid');
 const verifyToken = require('../middleware/verifikasiToken');
-
+const { logActivity } = require('./aktivitas');
 /* get customer */
 router.get('/', (req, res) => {
   db.query('SELECT * FROM customer', (err, result) => {
@@ -38,7 +38,7 @@ router.get('/:id', verifyToken, (req, res) => {
 });
 
 /* post customer */
-router.post('/', verifyToken, (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   const data = req.body;
   const id = uuidv4();
   const created_at = new Date();
@@ -86,6 +86,10 @@ router.post('/', verifyToken, (req, res) => {
     updated_at,
   ];
 
+  //masukin ke log aktivitas
+
+  await logActivity('hapus kategori', `menambahkan customer baru: ${data.nama_customer} `);
+
   db.query(query, values, (err, result) => {
     if (err) {
       responsePayload(500, 'gagal menyimpan data', null, res);
@@ -96,73 +100,89 @@ router.post('/', verifyToken, (req, res) => {
 });
 
 /* update customer */
-router.put('/:id', verifyToken, (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
   const id = req.params.id;
   const data = req.body;
   const updated_at = new Date();
 
+  // Validasi input
   if (!data || !data.nama_customer || !data.alamat || !data.telepon || !data.email) {
-    responsePayload(400, 'data tidak valid', null, res);
-    return;
+    return responsePayload(400, 'Data tidak valid', null, res);
   }
 
   // Validasi nama
   if (data.nama_customer.length < 3) {
-    responsePayload(400, 'nama customer harus lebih dari 3 karakter', null, res);
-    return;
+    return responsePayload(400, 'Nama customer harus lebih dari 3 karakter', null, res);
   }
 
   // Validasi email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(data.email)) {
-    responsePayload(400, 'email tidak valid, harus menggunakan @example.com', null, res);
-    return;
+    return responsePayload(400, 'Email tidak valid, harus menggunakan format yang benar', null, res);
   }
 
   // Validasi alamat
   if (data.alamat.length < 5) {
-    responsePayload(400, 'alamat harus lebih dari 5 karakter', null, res);
-    return;
+    return responsePayload(400, 'Alamat harus lebih dari 5 karakter', null, res);
   }
 
   // Validasi telepon
   if (data.telepon.length < 10) {
-    responsePayload(400, 'telepon harus lebih dari 10 karakter', null, res);
-    return;
+    return responsePayload(400, 'Telepon harus lebih dari 10 karakter', null, res);
   }
 
   const query =
     'UPDATE customer SET nama_customer = $1, alamat = $2, telepon = $3, email = $4, updated_at = $5 WHERE id_customer = $6 RETURNING *';
   const values = [data.nama_customer, data.alamat, data.telepon, data.email, updated_at, id];
 
-  db.query(query, values, (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal mengupdate data', null, res);
-      return;
-    }
+  try {
+    // Log aktivitas sebelum mengupdate
+    await logActivity('Update Customer', `Update customer  ${data.nama_customer}`);
+
+    // Eksekusi query
+    const result = await db.query(query, values);
+
+    // Cek apakah ada data yang diupdate
     if (result.rows.length === 0) {
-      responsePayload(404, 'customer tidak ditemukan', null, res);
-      return;
+      return responsePayload(404, 'Customer tidak ditemukan', null, res);
     }
-    responsePayload(200, 'data customer berhasil diupdate', result.rows[0], res);
-  });
+
+    // Response sukses
+    return responsePayload(200, 'Data customer berhasil diupdate', result.rows[0], res);
+  } catch (err) {
+    console.error('Error:', err);
+    return responsePayload(500, 'Gagal mengupdate data', err.message, res);
+  }
 });
 
 /* delete customer */
-router.delete('/:id', verifyToken, (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
   const id = req.params.id;
+  if (!id) {
+    return responsePayload(400, 'ID tidak valid', null, res);
+  }
 
-  db.query('DELETE FROM customer WHERE id_customer = $1 RETURNING *', [id], (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal menghapus data', null, res);
-      return;
+  try {
+    // Cek apakah customer ada
+    const checkResult = await db.query('SELECT * FROM customer WHERE id_customer = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      return responsePayload(404, 'Customer tidak ditemukan', null, res);
     }
-    if (result.rows.length === 0) {
-      responsePayload(404, 'customer tidak ditemukan', null, res);
-      return;
-    }
-    responsePayload(200, 'data customer berhasil dihapus', result.rows[0], res);
-  });
+
+    // Log aktivitas sebelum menghapus
+    await logActivity('Hapus Customer', `hapus customer ${checkResult.rows[0].nama_customer}`);
+
+    // Hapus customer dari database
+    const query = 'DELETE FROM customer WHERE id_customer = $1';
+    const values = [id];
+    await db.query(query, values);
+
+    // Response sukses
+    return responsePayload(200, 'Data customer berhasil dihapus', null, res);
+  } catch (err) {
+    console.error('Error:', err);
+    return responsePayload(500, 'Gagal menghapus data', err.message, res);
+  }
 });
 
 module.exports = router;

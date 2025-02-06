@@ -12,7 +12,6 @@ const redis = require('../connection/redis');
 const redisClient = require('../connection/redis');
 
 const secretKey = process.env.SECRET_KEY;
-console.log('key saat login: ', secretKey);
 /* Get users */
 // routes/user.js
 router.get('/', verifyToken, async (req, res) => {
