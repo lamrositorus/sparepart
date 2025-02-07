@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
     if (period === 'monthly') {
       previousTotalPenjualan = await db.query(
         'SELECT SUM(total_harga) AS total_penjualan FROM penjualan WHERE EXTRACT(YEAR FROM tanggal) = $1 AND EXTRACT(MONTH FROM tanggal) = $2',
-        [year - 1, new Date().getMonth() + 1] // Mengambil bulan yang sama tahun lalu
+        [year, new Date().getMonth() + 1] // Mengambil bulan yang sama tahun lalu
       );
     } else if (period === 'weekly') {
       const currentWeek = getISOWeek(new Date()); // Mengambil minggu saat ini
@@ -55,23 +55,86 @@ router.get('/', async (req, res) => {
       );
     }
 
-    const previousTotal = previousTotalPenjualan.rows[0].total_penjualan || 0;
-    console.log('Previous Total Penjualan:', previousTotal);
+    const previousTotalPenjualanValue = previousTotalPenjualan.rows[0].total_penjualan || 0;
+    console.log('Previous Total Penjualan:', previousTotalPenjualanValue);
     console.log('Total Penjualan:', totalPenjualan);
 
-    // Hitung persentase perubahan
+    // Hitung persentase perubahan total penjualan
     const trendPercentage =
-      previousTotal === 0 ? 0 : ((totalPenjualan - previousTotal) / previousTotal) * 100;
+      previousTotalPenjualanValue === 0
+        ? 0
+        : ((totalPenjualan - previousTotalPenjualanValue) / previousTotalPenjualanValue) * 100;
 
-    // Ambil total keuntungan
+    // Ambil total keuntungan untuk periode saat ini
     const totalKeuntunganResult = await db.query(
       'SELECT SUM(keuntungan) AS total_keuntungan FROM history_penjualan'
     );
     const totalKeuntungan = totalKeuntunganResult.rows[0].total_keuntungan || 0;
+    console.log('Total Keuntungan:', totalKeuntungan);
 
-    // Ambil jumlah pelanggan
+    // Ambil total keuntungan untuk periode sebelumnya
+    let previousTotalKeuntungan = 0;
+    if (period === 'monthly') {
+      previousTotalKeuntungan = await db.query(
+        'SELECT SUM(keuntungan) AS total_keuntungan FROM history_penjualan WHERE EXTRACT(YEAR FROM tanggal) = $1 AND EXTRACT(MONTH FROM tanggal) = $2',
+        [year, new Date().getMonth()] // Mengambil bulan yang sama tahun lalu
+      );
+    } else if (period === 'weekly') {
+      const currentWeek = getISOWeek(new Date()); // Mengambil minggu saat ini
+      previousTotalKeuntungan = await db.query(
+        'SELECT SUM(keuntungan) AS total_keuntungan FROM history_penjualan WHERE EXTRACT(YEAR FROM tanggal) = $1 AND EXTRACT(WEEK FROM tanggal) = $2',
+        [year, currentWeek - 1] // Mengambil minggu yang sama minggu lalu
+      );
+    } else if (period === 'daily') {
+      previousTotalKeuntungan = await db.query(
+        'SELECT SUM(keuntungan) AS total_keuntungan FROM history_penjualan WHERE tanggal::date = $1',
+        [new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0]] // Mengambil hari sebelumnya
+      );
+    }
+
+    const previousTotalKeuntunganValue = previousTotalKeuntungan.rows[0].total_keuntungan || 0;
+    console.log('Previous Total Keuntungan:', previousTotalKeuntunganValue);
+    console.log('Total Keuntungan:', totalKeuntungan);
+
+    // Hitung persentase perubahan total keuntungan
+    const trendPercentageKeuntungan =
+      previousTotalKeuntunganValue === 0
+        ? 0
+        : ((totalKeuntungan - previousTotalKeuntunganValue) / previousTotalKeuntunganValue) * 100;
+
+    // Ambil jumlah pelanggan untuk periode saat ini
     const totalPelangganResult = await db.query('SELECT COUNT(*) AS total_pelanggan FROM customer');
     const totalPelanggan = totalPelangganResult.rows[0].total_pelanggan || 0;
+
+    // Ambil jumlah pelanggan untuk periode sebelumnya
+    let previousTotalPelanggan = 0;
+    if (period === 'monthly') {
+      previousTotalPelanggan = await db.query(
+        'SELECT COUNT(*) AS total_pelanggan FROM customer WHERE EXTRACT(YEAR FROM created_at) = $1 AND EXTRACT(MONTH FROM created_at) = $2',
+        [year, new Date().getMonth()] // Mengambil bulan yang sama tahun lalu
+      );
+    } else if (period === 'weekly') {
+      const currentWeek = getISOWeek(new Date());
+      previousTotalPelanggan = await db.query(
+        'SELECT COUNT(*) AS total_pelanggan FROM customer WHERE EXTRACT(YEAR FROM created_at) = $1 AND EXTRACT(WEEK FROM created_at) = $2',
+        [year, currentWeek - 1] // Mengambil minggu yang sama minggu lalu
+      );
+    } else if (period === 'daily') {
+      previousTotalPelanggan = await db.query(
+        'SELECT COUNT(*) AS total_pelanggan FROM customer WHERE created_at::date = $1',
+        [new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0]] // Mengambil hari sebelumnya
+      );
+    }
+
+    const previousTotalPelangganValue = previousTotalPelanggan.rows[0].total_pelanggan || 0;
+    console.log('Previous Total Pelanggan:', previousTotalPelangganValue);
+    console.log('Total Pelanggan:', totalPelanggan);
+
+    // Hitung persentase perubahan total pelanggan
+    const pelangganTrendPercentage =
+      previousTotalPelangganValue === 0
+        ? 0
+        : ((totalPelanggan - previousTotalPelangganValue) / previousTotalPelangganValue) * 100;
 
     // Ambil jumlah sparepart
     const totalSparepartResult = await db.query(
@@ -121,10 +184,22 @@ router.get('/', async (req, res) => {
       totalKeuntungan,
       totalPelanggan,
       totalSparepart,
-      trend: `${trendPercentage.toFixed(2)}% vs periode sebelumnya`, // Menambahkan informasi tren
-      [period === 'monthly' ? 'monthlySales' : period === 'weekly' ? 'weeklySales' : 'dailySales']:
-        salesData.rows,
+      trend: `${trendPercentage.toFixed(2)}% vs periode sebelumnya`, // Menambahkan informasi tren penjualan
+      keuntunganTrend: `${trendPercentageKeuntungan.toFixed(2)}% vs periode sebelumnya`, // Menambahkan informasi tren keuntungan
+      pelangganTrend: `${pelangganTrendPercentage.toFixed(2)}% vs periode sebelumnya`, // Menambahkan informasi tren pelanggan
+      monthlySales: [], // Inisialisasi dengan array kosong
+      weeklySales: [], // Inisialisasi dengan array kosong
+      dailySales: [], // Inisialisasi dengan array kosong
     };
+
+    // Ambil data penjualan berdasarkan periode
+    if (period === 'monthly') {
+      responseData.monthlySales = salesData.rows || []; // Pastikan ini adalah array
+    } else if (period === 'weekly') {
+      responseData.weeklySales = salesData.rows || []; // Pastikan ini adalah array
+    } else if (period === 'daily') {
+      responseData.dailySales = salesData.rows || []; // Pastikan ini adalah array
+    }
 
     responsePayload(200, 'Dashboard data berhasil diambil', responseData, res);
   } catch (error) {

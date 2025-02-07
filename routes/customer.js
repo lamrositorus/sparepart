@@ -118,7 +118,12 @@ router.put('/:id', verifyToken, async (req, res) => {
   // Validasi email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(data.email)) {
-    return responsePayload(400, 'Email tidak valid, harus menggunakan format yang benar', null, res);
+    return responsePayload(
+      400,
+      'Email tidak valid, harus menggunakan format yang benar',
+      null,
+      res
+    );
   }
 
   // Validasi alamat

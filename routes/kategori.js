@@ -9,11 +9,12 @@ router.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM kategori');
     if (result.rows.length === 0) {
-      return responsePayload(200, 'data tidak ditemukan', null, res);
+      return responsePayload(200, 'Tidak ada kategori yang ditemukan', null, res);
     }
-    responsePayload(200, 'data berhasil diambil', result.rows, res);
+    responsePayload(200, 'Data berhasil diambil', result.rows, res);
   } catch (err) {
-    responsePayload(500, 'gagal mengambil data', null, res);
+    console.error('Error fetching categories:', err);
+    responsePayload(500, 'Gagal mengambil data', null, res);
   }
 });
 
