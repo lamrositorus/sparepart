@@ -65,11 +65,11 @@ app.get('/', (req, res) => {
 
 //server tetap berjalan meski terjadi error
 process.on('unhandledRejection', (err, promise) => {
-  console.log(`Logged Error: ${err}`);
+  console.log(`Loggedd Error: ${err}`);
 });
 
 process.on('uncaughtException', (err) => {
-  console.log(`Logged Error: ${err}`);
+  console.log(`Logged Erroree: ${err}`);
 });
 app.use((err, req, res, next) => {
   console.error('error cuy: ', err.stack);

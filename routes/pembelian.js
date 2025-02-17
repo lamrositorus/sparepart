@@ -138,10 +138,12 @@ router.post('/', async (req, res) => {
       const queryUpdateStok = 'UPDATE sparepart SET stok = stok - $1 WHERE id_sparepart = $2';
       await db.query(queryUpdateStok, [data.jumlah, data.id_sparepart]);
     }
-    await logActivity(
-      'CREATE_PEMBELIAN',
-      `Pembelian baru dengan ID ${id_pembelian} berhasil disimpan`
-    );
+    //manipulasi id_sparepart menjadi nama_sparepart dan masukin ke log aktivitas
+    const querySparepart = 'SELECT nama_sparepart FROM sparepart WHERE id_sparepart = $1';
+    const resultSparepart = await db.query(querySparepart, [data.id_sparepart]);
+    const nama_sparepart = resultSparepart.rows[0].nama_sparepart;
+
+    await logActivity('CREATE_PEMBELIAN', `Pembelian  ${nama_sparepart} berhasil disimpan`);
 
     responsePayload(201, 'data berhasil disimpan', pembelianHistory.rows[0], res);
   } catch (err) {
@@ -205,9 +207,13 @@ router.put('/:id', async (req, res) => {
         id_sparepart,
       ]);
     }
+    //manipulasi id_sparepart menjadi nama_sparepart dan masukin ke log aktivitas
+    const querySparepart = 'SELECT nama_sparepart FROM sparepart WHERE id_sparepart = $1';
+    const resultSparepart = await db.query(querySparepart, [id_sparepart]);
+    const nama_sparepart = resultSparepart.rows[0].nama_sparepart;
     await logActivity(
       'UPDATE_PEMBELIAN',
-      `Status pembelian dengan ID ${id} berhasil diupdate menjadi ${status}`
+      `Status pembelian  ${nama_sparepart} berhasil diupdate menjadi ${status}`
     );
 
     responsePayload(200, 'status berhasil diupdate', result.rows[0], res);
@@ -226,7 +232,7 @@ router.delete('/:id', async (req, res) => {
   }
   try {
     await db.query('DELETE FROM pembelian WHERE id_pembelian = $1', [id]);
-    await logActivity('DELETE_PEMBELIAN', `Pembelian dengan ID ${id} berhasil dihapus`);
+    await logActivity('DELETE_PEMBELIAN', `Pembelian  ${nama_sparepart} berhasil dihapus`);
 
     responsePayload(200, 'data berhasil dihapus', null, res);
   } catch (err) {

@@ -15,7 +15,14 @@ router.get('/', async (req, res) => {
   if (result.rows.length === 0) {
     return responsePayload(200, 'data tidak ditemukan', null, res);
   }
-  responsePayload(200, 'data berhasil diambil', result.rows, res);
+  // Format data untuk menghilangkan .00
+  const formattedRows = result.rows.map((row) => ({
+    ...row,
+    harga: parseFloat(row.harga).toFixed(0),
+    margin: parseFloat(row.margin).toFixed(2),
+    harga_jual: parseFloat(row.harga_jual).toFixed(0),
+  }));
+  responsePayload(200, 'data berhasil diambil', formattedRows, res);
 });
 
 /* POST new sparepart */
@@ -27,7 +34,6 @@ router.post('/', async (req, res) => {
 
   // Validate input data
   if (
-    !data ||
     !data.nama_sparepart ||
     !data.harga ||
     !data.stok ||
@@ -80,7 +86,10 @@ router.post('/', async (req, res) => {
   }
 
   // Calculate harga_jual
-  const hargaJual = data.harga / (1 - data.margin);
+  const harga = parseFloat(data.harga);
+  const margin = parseFloat(data.margin);
+  const marginValue = harga * margin; // Menghitung nilai margin
+  const hargaJual = harga + marginValue; // Menambahkan margin ke harga pokok
 
   // Insert into database
   const query =
@@ -133,8 +142,6 @@ router.put('/:id', async (req, res) => {
     !data.nama_sparepart ||
     !data.harga ||
     !data.stok ||
-    !data.id_kategori ||
-    !data.id_pemasok ||
     data.margin === undefined ||
     data.margin === null
   ) {
@@ -157,20 +164,20 @@ router.put('/:id', async (req, res) => {
   }
 
   // Calculate harga_jual
-  const hargaJual = data.harga / (1 - data.margin);
-
+  const harga = parseFloat(data.harga);
+  const margin = parseFloat(data.margin);
+  const marginValue = harga * margin; // Menghitung nilai margin
+  const hargaJual = harga + marginValue; // Menambahkan margin ke harga pokok
   // Update data
   const query =
-    'UPDATE sparepart SET nama_sparepart = $1, harga = $2, harga_jual = $3, margin = $4, stok = $5, deskripsi = $6, id_kategori = $7, id_pemasok = $8, updated_at = $9 WHERE id_sparepart = $10 RETURNING *';
+    'UPDATE sparepart SET nama_sparepart = $1, harga = $2, harga_jual = $3, margin = $4, stok = $5, deskripsi = $6, updated_at = $7 WHERE id_sparepart = $8 RETURNING *';
   const values = [
     data.nama_sparepart,
     data.harga,
-    hargaJual.toFixed(0),
+    hargaJual,
     data.margin,
     data.stok,
     data.deskripsi,
-    data.id_kategori,
-    data.id_pemasok,
     updated_at,
     id,
   ];

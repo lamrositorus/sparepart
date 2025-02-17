@@ -12,23 +12,23 @@ const knex = require('knex')({
 
 // Daftar nama sparepart berdasarkan kategori dan rentang harga
 const sparepartDataByCategory = {
-  'Rem': {
+  Rem: {
     names: ['Rem Depan', 'Rem Belakang', 'Kampas Rem', 'Cakram Rem'],
     priceRange: { min: 50000, max: 300000 },
   },
-  'Suspensi': {
+  Suspensi: {
     names: ['Shockbreaker', 'Spring Suspensi', 'Bushing Suspensi'],
     priceRange: { min: 200000, max: 800000 },
   },
-  'Transmisi': {
+  Transmisi: {
     names: ['Transmisi Manual', 'Transmisi Otomatis', 'Kopling'],
     priceRange: { min: 1000000, max: 5000000 },
   },
-  'Knalpot': {
+  Knalpot: {
     names: ['Knalpot Racing', 'Knalpot Standar', 'Muffler'],
     priceRange: { min: 300000, max: 1500000 },
   },
-  'Radiator': {
+  Radiator: {
     names: ['Radiator Mobil', 'Kipas Radiator', 'Thermostat'],
     priceRange: { min: 150000, max: 600000 },
   },
@@ -36,7 +36,7 @@ const sparepartDataByCategory = {
     names: ['Filter Udara Kering', 'Filter Udara Basah'],
     priceRange: { min: 20000, max: 100000 },
   },
-  'Baterai': {
+  Baterai: {
     names: ['Baterai Mobil', 'Baterai Kering'],
     priceRange: { min: 300000, max: 1200000 },
   },
@@ -81,28 +81,46 @@ async function seedSparepart() {
 
   const sparepartData = [];
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1000; i++) {
     // Pilih kategori acak
     const id_kategori = faker.helpers.arrayElement(kategoriIds);
     const kategori = await knex('kategori').where('id_kategori', id_kategori).first();
 
+    // Tambahkan log untuk memeriksa nama kategori
+    console.log('Kategori yang diambil:', kategori.nama_kategori);
+
     // Ambil data sparepart berdasarkan kategori
     const sparepartDataForCategory = sparepartDataByCategory[kategori.nama_kategori];
+
+    // Validasi untuk memastikan sparepartDataForCategory tidak undefined
+    if (!sparepartDataForCategory) {
+      console.error(
+        `Kategori ${kategori.nama_kategori} tidak ditemukan dalam sparepartDataByCategory.`
+      );
+      continue; // Lewati iterasi ini jika kategori tidak ditemukan
+    }
+
     const nama_sparepart = faker.helpers.arrayElement(sparepartDataForCategory.names);
-    
+
     // Menghasilkan harga acak dalam rentang yang ditentukan
     const harga = faker.number.int({
       min: sparepartDataForCategory.priceRange.min,
       max: sparepartDataForCategory.priceRange.max,
     });
 
+    // Menghasilkan margin acak antara 0 dan 1
+    const margin = parseFloat(faker.number.float({ min: 0, max: 1, precision: 0.01 }));
+
+    // Menghitung harga jual
+    const hargaJual = parseFloat((harga * (1 + margin)).toFixed(0));
+
     sparepartData.push({
       id_sparepart: faker.string.uuid(), // Menghasilkan UUID untuk id_sparepart
       nama_sparepart: nama_sparepart, // Menggunakan nama sparepart yang sesuai dengan kategori
       harga: harga, // Menggunakan harga yang lebih realistis
-      margin: parseFloat(faker.number.float({ min: 0, max: 1, precision: 0.01 })), // Menghasilkan margin acak
-      harga_jual: parseFloat((harga * (1 + faker.number.float({ min: 0.1, max: 0.5, precision: 0.01 }))).toFixed(2)), // Menghasilkan harga jual berdasarkan harga
-      stok: faker.number.int({ min: 0, max: 100 }), // Menghasilkan stok acak
+      margin: margin, // Menghasilkan margin acak
+      harga_jual: hargaJual, // Menghasilkan harga jual berdasarkan harga
+      stok: faker.number.int({ min: 1, max: 100 }), // Menghasilkan stok acak, minimal 1
       id_kategori: id_kategori, // Mengambil id_kategori acak
       id_pemasok: faker.helpers.arrayElement(pemasokIds), // Mengambil id_pemasok acak
       deskripsi: faker.lorem.sentence(), // Menghasilkan deskripsi acak
@@ -112,8 +130,13 @@ async function seedSparepart() {
     });
   }
 
-  await knex('sparepart').insert(sparepartData);
-  console.log('Data dummy berhasil ditambahkan ke tabel sparepart');
+  // Cek apakah ada data yang akan dimasukkan
+  if (sparepartData.length > 0) {
+    await knex('sparepart').insert(sparepartData);
+    console.log('Data dummy berhasil ditambahkan ke tabel sparepart');
+  } else {
+    console.log('Tidak ada data sparepart yang dihasilkan.');
+  }
 }
 
 seedSparepart()

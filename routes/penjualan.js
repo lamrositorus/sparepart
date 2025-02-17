@@ -151,6 +151,7 @@ router.post('/', async (req, res) => {
     const harga_beli = sparepartData.harga; // Pastikan ini tidak null
     const harga_jual = sparepartData.harga_jual;
     const margin = sparepartData.margin;
+    console.log('margin: ', margin);
 
     // Validasi harga_beli
     if (harga_beli === null) {

@@ -1,11 +1,16 @@
 const { Client } = require('pg');
-
+require('dotenv').config();
+// Gunakan URI Supabase untuk koneksi
 const client = new Client({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'sparepart',
-  password: 'admin',
-  port: 5432,
+  connectionString: process.env.DB_URL, // Menggunakan variabel lingkungan
+  ssl: {
+    rejectUnauthorized: false, // Pastikan SSL diaktifkan untuk koneksi ke Supabase
+  },
 });
-client.connect();
+
+// Koneksi ke database
+client.connect()
+  .then(() => console.log('Connected to Supabase PostgreSQL'))
+  .catch(err => console.error('Connection error', err.stack));
+
 module.exports = client;
