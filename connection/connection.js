@@ -9,8 +9,9 @@ const client = new Client({
 });
 
 // Koneksi ke database
-client.connect()
+client
+  .connect()
   .then(() => console.log('Connected to Supabase PostgreSQL'))
-  .catch(err => console.error('Connection error', err.stack));
+  .catch((err) => console.error('Connection error', err.stack));
 
 module.exports = client;
