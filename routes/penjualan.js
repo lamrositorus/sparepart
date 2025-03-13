@@ -6,17 +6,21 @@ const { v4: uuidv4 } = require('uuid');
 const { logActivity } = require('../routes/aktivitas');
 
 /* get penjualan */
-router.get('/', (req, res) => {
-  db.query('SELECT * FROM penjualan', (err, result) => {
-    if (err) {
-      responsePayload(500, 'gagal mengambil data', null, res);
-    }
+router.get('/', async (req, res) => {
+  try {
+    const start = Date.now();
+    const result = await db.query('SELECT * FROM penjualan');
+    const duration = Date.now() - start;
+    console.log(`Query duration: ${duration}ms`);
+
     if (result.rows.length === 0) {
-      responsePayload(200, 'data tidak ditemukan', null, res);
-      return;
+      return responsePayload(200, 'data tidak ditemukan', null, res);
     }
-    responsePayload(200, 'data berhasil diambil', result.rows, res);
-  });
+    return responsePayload(200, 'data berhasil diambil', result.rows, res);
+  } catch (err) {
+    console.error('Error:', err);
+    return responsePayload(500, 'gagal mengambil data', null, res);
+  }
 });
 /* Endpoint ini mengembalikan statistik penjualan per bulan, misalnya jumlah transaksi, total penjualan, dan total keuntungan. */
 router.get('/stats', async (req, res) => {
